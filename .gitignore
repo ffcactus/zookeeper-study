@@ -1,4 +1,4 @@
 target/
 study.iml
 .idea/
-
+srz/main/resources/zookeeper.properties
