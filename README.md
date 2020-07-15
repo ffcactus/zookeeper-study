@@ -21,3 +21,14 @@ in your settings.xml like the following example:
   </activeProfiles>
 </settings>
 ``` 
+
+## How to deploy
+```shell script
+## use docker service to work with hostname resolution.
+docker swarm init
+## deploy it.
+docker stack deploy -c deploy/stack.yml zookeeper
+## undeploy it.
+docker stack rm zookeeper
+```
+
