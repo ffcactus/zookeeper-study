@@ -13,29 +13,29 @@ public interface DistributedDoubleBarrier {
     /**
      * Do the initialization. If this distributed double barrier is considered as initialized, nothing should happen.
      *
-     * @throws Exception Generally caller need to handle the specific exception thrown by implementation.
+     * @throws InterruptedException If the transaction is interrupted.
      */
-    void init() throws Exception;
+    void init() throws InterruptedException;
 
     /**
      * Enter the barrier.
      *
-     * @throws IOException Generally caller need to handle the specific exception thrown by implementation.
+     * @throws InterruptedException If the transaction is interrupted.
      */
-    void enter() throws Exception;
+    void enter() throws InterruptedException;
 
     /**
      * Leave the barrier.
      *
-     * @throws IOException Generally caller need to handle the specific exception thrown by implementation.
+     * @throws InterruptedException If the transaction is interrupted.
      */
-    void leave() throws Exception;
+    void leave() throws InterruptedException;
 
     /**
      * Release the barrier.
      *
-     * @throws Exception Generally caller need to handle the specific exception thrown by implementation.
+     * @throws InterruptedException If the transaction is interrupted.
      */
-    void release() throws IOException;
+    void release() throws InterruptedException;
 
 }
