@@ -68,32 +68,45 @@ public class ZookeeperDoubleBarrier implements DistributedDoubleBarrier {
             var nodePath = path + '/' + Thread.currentThread().getName();
             ephemeralNode = zookeeper.create(nodePath, new byte[0],
                     ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
+            System.out.println(Thread.currentThread().getName() + " created " + ephemeralNode);
             // watch the existence of a node named ready, it is used to allow the pass.
             zookeeper.exists(path + READY_NODE, event -> {
                 if (event.getType() == Watcher.Event.EventType.NodeCreated) {
+                    System.out.println(Thread.currentThread().getName() + " found ready.");
                     synchronized (entryLock) {
                         entryLock.notifyAll();
                     }
                 }
             });
             // wait for enough nodes.
-            var allowDirectly = true;
-            while (zookeeper.getChildren(path, false).size() < count) {
-                allowDirectly = false;
+            List<String> children;
+            System.out.println(Thread.currentThread().getName() + " checking children.");
+            while ((children = zookeeper.getChildren(path, false)).size() < count) {
+                System.out.println(Thread.currentThread().getName() + " found " + children);
                 synchronized (entryLock) {
                     entryLock.wait();
                 }
             }
-            // we can go now, and notify other ones by create the ready node.
-            if (allowDirectly) {
-                zookeeper.create(path + READY_NODE, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-            }
+            System.out.println(Thread.currentThread().getName() + " found enough children.");
+            createReady();
         } catch (KeeperException e) {
             throw new IllegalStateException(e);
         }
-
     }
 
+    private void createReady() throws InterruptedException {
+        try {
+            zookeeper.create(path + READY_NODE, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+            System.out.println(Thread.currentThread().getName() + " created ready.");
+            System.out.println("--- Barrier opened for every one ---");
+        } catch (KeeperException e) {
+            if (e.code().equals(KeeperException.Code.NODEEXISTS)) {
+                System.out.println(Thread.currentThread().getName() + " found ready exist.");
+            } else {
+                throw new IllegalStateException(e);
+            }
+        }
+    }
     /**
      * Leave the barrier.
      *
