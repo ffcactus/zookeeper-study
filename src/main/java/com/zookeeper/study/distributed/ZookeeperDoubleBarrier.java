@@ -82,7 +82,7 @@ public class ZookeeperDoubleBarrier implements DistributedDoubleBarrier {
             List<String> children;
             System.out.println(Thread.currentThread().getName() + " checking children.");
             while ((children = zookeeper.getChildren(path, false)).size() < count) {
-                System.out.println(Thread.currentThread().getName() + " found " + children);
+                // System.out.println(Thread.currentThread().getName() + " found " + children);
                 synchronized (entryLock) {
                     entryLock.wait();
                 }
