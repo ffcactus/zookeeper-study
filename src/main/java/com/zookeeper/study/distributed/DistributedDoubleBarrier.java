@@ -22,14 +22,14 @@ public interface DistributedDoubleBarrier {
      *
      * @throws InterruptedException If the transaction is interrupted.
      */
-    void enter() throws InterruptedException;
+    void enter(String threadName) throws InterruptedException;
 
     /**
      * Leave the barrier.
      *
      * @throws InterruptedException If the transaction is interrupted.
      */
-    void leave() throws InterruptedException;
+    void leave(String threadName) throws InterruptedException;
 
     /**
      * Release the barrier.

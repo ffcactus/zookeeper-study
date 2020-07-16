@@ -1,58 +1,57 @@
 package com.zookeeper.study.distributed.app;
 
 import com.zookeeper.study.distributed.*;
-import org.apache.zookeeper.ZooKeeper;
 
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.zookeeper.*;
+
 /**
  * Test {@link com.zookeeper.study.distributed.ZookeeperDoubleBarrier}.
  */
 public class DistributedDoubleBarrierApp {
-    private String path;
+    private SyncPrimitive.Barrier barrier;
     private final ExecutorService executorService;
-    private int minAllowed;
-    private ZooKeeper zookeeper;
+    private static final Logger logger = LogManager.getLogger(DistributedDoubleBarrierApp.class);
 
     public DistributedDoubleBarrierApp() {
         executorService = Executors.newCachedThreadPool();
     }
 
     public Void test0() {
-        final ZooKeeper zk = zookeeper;
-        try (zk) {
-            var doubleBarrier = new ZookeeperDoubleBarrier(zookeeper, path, minAllowed);
+        try {
             var threadName = Thread.currentThread().getName();
-            doubleBarrier.init();
 
-            // System.out.println(threadName + " Entering barrier.");
-            doubleBarrier.enter();
-            System.out.println(threadName + " Entered barrier.");
+            logger.info("{} Entering barrier.", threadName);
+            barrier.enter(threadName);
+            logger.info("{} Entered barrier.", threadName);
 
-            // Thread.sleep(5 * 1000L);
+            Thread.sleep(3000L);
 
-            // System.out.println(threadName + " Leaving barrier.");
-            doubleBarrier.leave();
-            System.out.println(threadName + " Leaved barrier.");
+            logger.info("{} Leaving barrier.", threadName);
+            barrier.leave(threadName);
+            logger.info("{} Leaved d barrier.", threadName);
 
-        } catch (InterruptedException e) {
+        } catch (InterruptedException | KeeperException e) {
             e.printStackTrace();
             Thread.currentThread().interrupt();
         }
         return null;
     }
 
-    public void test(String path, int threadsCount) throws InterruptedException, IOException {
-        this.path = path;
-        this.minAllowed = threadsCount;
-        this.zookeeper = ZookeeperAppHelper.zookeeperInstance();
+    public void test(SyncPrimitive.Barrier barrier, int threadsCount) throws InterruptedException, IOException {
+        this.barrier = barrier;
         var callables = new ArrayList<Callable<Void>>(threadsCount);
         for (int i = 0; i < threadsCount; i++) {
             callables.add(this::test0);
         }
+        logger.info("invokeAll begin");
         executorService.invokeAll(callables);
+        logger.info("invokeAll done");
     }
 
     public void close() {
@@ -60,18 +59,22 @@ public class DistributedDoubleBarrierApp {
     }
 
     public static void main(String[] args) {
-        var app = new DistributedDoubleBarrierApp();
+        int concurrency = 10;
         try {
-            app.test("/doublebarrier", 50);
-            app.test("/doublebarrier", 50);
-            app.test("/doublebarrier", 50);
-            app.test("/doublebarrier", 50);
-            app.test("/doublebarrier", 50);
-        } catch (InterruptedException | IOException e) {
+
+            var barrier = new SyncPrimitive.Barrier(ZookeeperAppHelper.HOSTS, "/doublebarrier", concurrency);
+            var app = new DistributedDoubleBarrierApp();
+            for (int i = 0; i < 100; i++) {
+                app.test(barrier, concurrency);
+                logger.warn("--- round {} ---", i);
+            }
+            app.close();
+            logger.info("Test done.");
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace();
             Thread.currentThread().interrupt();
         }
-        app.close();
-        System.out.println("Test done.");
     }
 }
+
+// https://zookeeper.apache.org/doc/r3.4.6/zookeeperTutorial.html
