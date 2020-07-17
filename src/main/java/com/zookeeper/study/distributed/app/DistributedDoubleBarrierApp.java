@@ -14,37 +14,41 @@ import org.apache.zookeeper.*;
  * Test {@link com.zookeeper.study.distributed.ZookeeperDoubleBarrier}.
  */
 public class DistributedDoubleBarrierApp {
-    private SyncPrimitive.Barrier barrier;
+    private final ZookeeperDoubleBarrier barrier;
     private final ExecutorService executorService;
     private static final Logger logger = LogManager.getLogger(DistributedDoubleBarrierApp.class);
 
-    public DistributedDoubleBarrierApp() {
+    /**
+     * Constructor the application by an initialized barrier.
+     * @param barrier the initialized barrier.
+     */
+    public DistributedDoubleBarrierApp(ZookeeperDoubleBarrier barrier) {
+        this.barrier = barrier;
         executorService = Executors.newCachedThreadPool();
     }
 
     public Void test0() {
         try {
             var threadName = Thread.currentThread().getName();
-
+            var newBarrier = new ZookeeperDoubleBarrier(barrier);
             logger.info("{} Entering barrier.", threadName);
-            barrier.enter(threadName);
+            newBarrier.enter(threadName);
             logger.info("{} Entered barrier.", threadName);
 
-            Thread.sleep(3000L);
+//            Thread.sleep(3000L);
 
             logger.info("{} Leaving barrier.", threadName);
-            barrier.leave(threadName);
-            logger.info("{} Leaved d barrier.", threadName);
+            newBarrier.leave(threadName);
+            logger.info("{} Leaved barrier.", threadName);
 
-        } catch (InterruptedException | KeeperException e) {
+        } catch (InterruptedException e) {
             e.printStackTrace();
             Thread.currentThread().interrupt();
         }
         return null;
     }
 
-    public void test(SyncPrimitive.Barrier barrier, int threadsCount) throws InterruptedException, IOException {
-        this.barrier = barrier;
+    public void test(int threadsCount) throws InterruptedException {
         var callables = new ArrayList<Callable<Void>>(threadsCount);
         for (int i = 0; i < threadsCount; i++) {
             callables.add(this::test0);
@@ -59,13 +63,14 @@ public class DistributedDoubleBarrierApp {
     }
 
     public static void main(String[] args) {
-        int concurrency = 10;
+        int concurrency = 5;
         try {
-
-            var barrier = new SyncPrimitive.Barrier(ZookeeperAppHelper.HOSTS, "/doublebarrier", concurrency);
-            var app = new DistributedDoubleBarrierApp();
-            for (int i = 0; i < 100; i++) {
-                app.test(barrier, concurrency);
+            var zk = ZookeeperAppHelper.zookeeperInstance();
+            var barrier = new ZookeeperDoubleBarrier(zk, "/doublebarrier", concurrency * 2);
+            // barrier.init();
+            var app = new DistributedDoubleBarrierApp(barrier);
+            for (int i = 0; i < 5; i++) {
+                app.test(concurrency);
                 logger.warn("--- round {} ---", i);
             }
             app.close();
