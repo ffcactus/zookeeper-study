@@ -73,6 +73,7 @@ public class DistributedDoubleBarrierApp {
                 app.test(concurrency);
                 logger.warn("--- round {} ---", i);
             }
+            zk.close();
             app.close();
             logger.info("Test done.");
         } catch (IOException | InterruptedException e) {
